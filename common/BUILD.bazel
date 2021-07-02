@@ -12,6 +12,6 @@ filegroup(
         "**/*.h",
     ]),
     visibility = [
-        "//private/google-modules/gpu:__subpackages__",
+        "//gs/google-modules/gpu:__subpackages__",
     ],
 )

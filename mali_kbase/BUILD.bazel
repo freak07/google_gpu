@@ -15,13 +15,13 @@ kernel_module(
         "**/*.h",
         "**/Kbuild",
     ]) + [
-        "//private/google-modules/gpu/common:headers",
+        "//gs/google-modules/gpu/common:headers",
     ],
     outs = [
         "mali_kbase.ko",
     ],
-    kernel_build = "//private/gs-google:slider",
+    kernel_build = "//gs/kernel/device-modules:slider",
     visibility = [
-        "//private/gs-google:__pkg__",
+        "//gs/kernel/device-modules:__pkg__",
     ],
 )
