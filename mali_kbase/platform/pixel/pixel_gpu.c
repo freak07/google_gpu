@@ -13,7 +13,7 @@
 
 /* SOC includes */
 #ifdef CONFIG_MALI_PIXEL_GPU_SECURE_RENDERING
-#include <soc/samsung/exynos-smc.h>
+#include <linux/soc/samsung/exynos-smc.h>
 #endif /* CONFIG_MALI_PIXEL_GPU_SECURE_RENDERING */
 
 /* Mali core includes */
