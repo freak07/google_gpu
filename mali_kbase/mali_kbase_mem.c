@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
  * (C) COPYRIGHT 2010-2021 ARM Limited. All rights reserved.
@@ -19,7 +18,7 @@
  *
  */
 
-/**
+/*
  * Base kernel memory APIs
  */
 #include <linux/dma-buf.h>
@@ -349,7 +348,7 @@ static struct kbase_va_region *kbase_region_tracker_find_region_meeting_reqs(
 	return NULL;
 }
 
-/**
+/*
  * Remove a region object from the global list.
  * @reg: Region object to remove
  *
@@ -833,7 +832,7 @@ bool kbase_has_exec_va_zone(struct kbase_context *kctx)
 	return has_exec_va_zone;
 }
 
-/**
+/*
  * Determine if any allocations have been made on a context's region tracker
  * @kctx: KBase context
  *
@@ -1288,7 +1287,7 @@ void kbase_mem_term(struct kbase_device *kbdev)
 }
 KBASE_EXPORT_TEST_API(kbase_mem_term);
 
-/**
+/*
  * Allocate a free region object.
  * @rbtree:    Backlink to the red-black tree of memory regions.
  * @start_pfn: The Page Frame Number in GPU virtual address space.
@@ -1365,7 +1364,7 @@ static struct kbase_context *kbase_reg_flags_to_kctx(
 	return kctx;
 }
 
-/**
+/*
  * Free a region object.
  * @reg: Region
  *
@@ -1962,7 +1961,7 @@ int kbase_mem_free_region(struct kbase_context *kctx, struct kbase_va_region *re
 
 KBASE_EXPORT_TEST_API(kbase_mem_free_region);
 
-/**
+/*
  * Free the region from the GPU and unregister it.
  * @kctx:  KBase context
  * @gpu_addr: GPU address to free
@@ -3140,7 +3139,7 @@ int kbase_check_alloc_sizes(struct kbase_context *kctx, unsigned long flags,
 #undef KBASE_MSG_PRE
 }
 
-/**
+/*
  * Acquire the per-context region list lock
  * @kctx:  KBase context
  */
@@ -3152,7 +3151,7 @@ void kbase_gpu_vm_lock(struct kbase_context *kctx)
 
 KBASE_EXPORT_TEST_API(kbase_gpu_vm_lock);
 
-/**
+/*
  * Release the per-context region list lock
  * @kctx:  KBase context
  */

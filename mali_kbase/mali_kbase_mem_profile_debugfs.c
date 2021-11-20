@@ -1,4 +1,3 @@
-// SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
  * (C) COPYRIGHT 2012-2017, 2019-2021 ARM Limited. All rights reserved.
@@ -23,7 +22,7 @@
 
 #if IS_ENABLED(CONFIG_DEBUG_FS)
 
-/**
+/*
  * Show callback for the @c mem_profile debugfs file.
  *
  * This function is called to get the contents of the @c mem_profile debugfs

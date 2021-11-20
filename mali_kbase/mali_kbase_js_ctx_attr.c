@@ -26,7 +26,7 @@
  * Private functions follow
  */
 
-/**
+/*
  * Check whether a ctx has a certain attribute, and if so, retain that
  * attribute on the runpool.
  * @kbdev: Device pointer
@@ -75,7 +75,7 @@ static bool kbasep_js_ctx_attr_runpool_retain_attr(struct kbase_device *kbdev, s
 	return runpool_state_changed;
 }
 
-/**
+/*
  * Check whether a ctx has a certain attribute, and if so, release that
  * attribute on the runpool.
  * @kbdev: Device pointer
@@ -123,7 +123,7 @@ static bool kbasep_js_ctx_attr_runpool_release_attr(struct kbase_device *kbdev, 
 	return runpool_state_changed;
 }
 
-/**
+/*
  * Retain a certain attribute on a ctx, also retaining it on the runpool
  * if the context is scheduled.
  * @kbdev: Device pointer
@@ -163,7 +163,7 @@ static bool kbasep_js_ctx_attr_ctx_retain_attr(struct kbase_device *kbdev, struc
 	return runpool_state_changed;
 }
 
-/**
+/*
  * Release a certain attribute on a ctx, also releasing it from the runpool
  * if the context is scheduled.
  * @kbdev: Device pointer
