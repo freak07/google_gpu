@@ -2561,7 +2561,7 @@ exit:
 const struct vm_operations_struct kbase_vm_ops = {
 	.open  = kbase_cpu_vm_open,
 	.close = kbase_cpu_vm_close,
-	.split = kbase_cpu_vm_split,
+	.may_split = kbase_cpu_vm_split,
 	.fault = kbase_cpu_vm_fault
 };
 
