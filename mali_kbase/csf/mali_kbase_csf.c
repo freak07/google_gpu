@@ -34,6 +34,8 @@
 #include <csf/ipa_control/mali_kbase_csf_ipa_control.h>
 #include <mali_kbase_hwaccess_time.h>
 #include "mali_kbase_csf_event.h"
+#include <mali_linux_trace.h>
+
 
 #define CS_REQ_EXCEPTION_MASK (CS_REQ_FAULT_MASK | CS_REQ_FATAL_MASK)
 #define CS_ACK_EXCEPTION_MASK (CS_ACK_FAULT_MASK | CS_ACK_FATAL_MASK)
@@ -833,6 +835,8 @@ void kbase_csf_ring_csg_doorbell(struct kbase_device *kbdev, int slot)
 	if (WARN_ON(slot < 0))
 		return;
 
+	kbase_csf_scheduler_spin_lock_assert_held(kbdev);
+
 	kbase_csf_ring_csg_slots_doorbell(kbdev, (u32) (1 << slot));
 }
 
@@ -844,6 +848,8 @@ void kbase_csf_ring_csg_slots_doorbell(struct kbase_device *kbdev,
 	const u32 allowed_bitmap =
 		(u32) ((1U << kbdev->csf.global_iface.group_num) - 1);
 	u32 value;
+
+	kbase_csf_scheduler_spin_lock_assert_held(kbdev);
 
 	if (WARN_ON(slot_bitmap > allowed_bitmap))
 		return;
@@ -873,6 +879,8 @@ void kbase_csf_ring_cs_kernel_doorbell(struct kbase_device *kbdev,
 {
 	struct kbase_csf_cmd_stream_group_info *ginfo;
 	u32 value;
+
+	kbase_csf_scheduler_spin_lock_assert_held(kbdev);
 
 	if (WARN_ON(csg_nr < 0) ||
 	    WARN_ON(csg_nr >= kbdev->csf.global_iface.group_num))
@@ -2073,6 +2081,7 @@ static void kbase_queue_oom_event(struct kbase_queue *const queue)
 	struct kbase_csf_cmd_stream_info const *stream;
 	int csi_index = queue->csi_index;
 	u32 cs_oom_ack, cs_oom_req;
+	unsigned long flags;
 
 	lockdep_assert_held(&kctx->csf.lock);
 
@@ -2125,8 +2134,11 @@ static void kbase_queue_oom_event(struct kbase_queue *const queue)
 
 	err = handle_oom_event(kctx, stream);
 
+	kbase_csf_scheduler_spin_lock(kbdev, &flags);
 	kbase_csf_firmware_cs_input_mask(stream, CS_REQ, cs_oom_ack,
 					 CS_REQ_TILER_OOM_MASK);
+	kbase_csf_ring_cs_kernel_doorbell(kbdev, csi_index, slot_num, true);
+	kbase_csf_scheduler_spin_unlock(kbdev, flags);
 
 	if (err) {
 		dev_warn(
@@ -2137,8 +2149,6 @@ static void kbase_queue_oom_event(struct kbase_queue *const queue)
 		report_tiler_oom_error(group);
 		return;
 	}
-
-	kbase_csf_ring_cs_kernel_doorbell(kbdev, csi_index, slot_num, true);
 unlock:
 	kbase_csf_scheduler_unlock(kbdev);
 }
@@ -2830,6 +2840,7 @@ static inline void check_protm_enter_req_complete(struct kbase_device *kbdev,
 	dev_dbg(kbdev->dev, "Protected mode entry interrupt received");
 
 	kbdev->protected_mode = true;
+	trace_mali_protected_mode(kbdev->protected_mode);
 	kbase_ipa_protection_mode_switch_event(kbdev);
 	kbase_ipa_control_protm_entered(kbdev);
 	kbase_hwcnt_backend_csf_protm_entered(&kbdev->hwcnt_gpu_iface);
@@ -2868,6 +2879,7 @@ static inline void process_protm_exit(struct kbase_device *kbdev, u32 glb_ack)
 
 	if (!WARN_ON(!kbdev->protected_mode)) {
 		kbdev->protected_mode = false;
+		trace_mali_protected_mode(kbdev->protected_mode);
 		kbase_ipa_control_protm_exited(kbdev);
 		kbase_hwcnt_backend_csf_protm_exited(&kbdev->hwcnt_gpu_iface);
 	}
@@ -2924,6 +2936,33 @@ static inline void process_tracked_info_for_protm(struct kbase_device *kbdev,
 	}
 }
 
+static void order_job_irq_clear_with_iface_mem_read(void)
+{
+	/* Ensure that write to the JOB_IRQ_CLEAR is ordered with regards to the
+	 * read from interface memory. The ordering is needed considering the way
+	 * FW & Kbase writes to the JOB_IRQ_RAWSTAT and JOB_IRQ_CLEAR registers
+	 * without any synchronization. Without the barrier there is no guarantee
+	 * about the ordering, the write to IRQ_CLEAR can take effect after the read
+	 * from interface memory and that could cause a problem for the scenario where
+	 * FW sends back to back notifications for the same CSG for events like
+	 * SYNC_UPDATE and IDLE, but Kbase gets a single IRQ and observes only the
+	 * first event. Similar thing can happen with glb events like CFG_ALLOC_EN
+	 * acknowledgment and GPU idle notification.
+	 *
+	 *       MCU                                    CPU
+	 *  ---------------                         ----------------
+	 *  Update interface memory                 Write to IRQ_CLEAR to clear current IRQ
+	 *  <barrier>                               <barrier>
+	 *  Write to IRQ_RAWSTAT to raise new IRQ   Read interface memory
+	 */
+#if KERNEL_VERSION(5, 10, 0) <= LINUX_VERSION_CODE
+	__iomb();
+#else
+	/* CPU and GPU would be in the same Outer shareable domain */
+	dmb(osh);
+#endif
+}
+
 void kbase_csf_interrupt(struct kbase_device *kbdev, u32 val)
 {
 	unsigned long flags;
@@ -2934,6 +2973,7 @@ void kbase_csf_interrupt(struct kbase_device *kbdev, u32 val)
 
 	KBASE_KTRACE_ADD(kbdev, CSF_INTERRUPT, NULL, val);
 	kbase_reg_write(kbdev, JOB_CONTROL_REG(JOB_IRQ_CLEAR), val);
+	order_job_irq_clear_with_iface_mem_read();
 
 	if (csg_interrupts != 0) {
 		kbase_csf_scheduler_spin_lock(kbdev, &flags);
