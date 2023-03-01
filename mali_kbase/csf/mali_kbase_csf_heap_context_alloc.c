@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note
 /*
  *
- * (C) COPYRIGHT 2019-2021 ARM Limited. All rights reserved.
+ * (C) COPYRIGHT 2019-2022 ARM Limited. All rights reserved.
  *
  * This program is free software and is provided to you under the terms of the
  * GNU General Public License version 2 as published by the Free Software
@@ -144,7 +144,14 @@ void kbase_csf_heap_context_allocator_term(
 
 	if (ctx_alloc->region) {
 		kbase_gpu_vm_lock(kctx);
-		ctx_alloc->region->flags &= ~KBASE_REG_NO_USER_FREE;
+		/*
+		 * We can't enforce (nor check) the no_user_free refcount
+		 * to be 0 here as other code regions can take such a reference.
+		 * Anyway, this isn't an issue as the region will eventually
+		 * be freed by the region tracker if its refcount didn't drop
+		 * to 0.
+		 */
+		kbase_va_region_no_user_free_put(kctx, ctx_alloc->region);
 		kbase_mem_free_region(kctx, ctx_alloc->region);
 		kbase_gpu_vm_unlock(kctx);
 	}
@@ -156,8 +163,8 @@ u64 kbase_csf_heap_context_allocator_alloc(
 	struct kbase_csf_heap_context_allocator *const ctx_alloc)
 {
 	struct kbase_context *const kctx = ctx_alloc->kctx;
-	u64 flags = BASE_MEM_PROT_GPU_RD | BASE_MEM_PROT_GPU_WR |
-		BASE_MEM_PROT_CPU_WR | BASEP_MEM_NO_USER_FREE;
+	u64 flags = BASE_MEM_PROT_GPU_RD | BASE_MEM_PROT_GPU_WR | BASE_MEM_PROT_CPU_WR |
+		    BASEP_MEM_NO_USER_FREE | BASE_MEM_PROT_CPU_RD;
 	u64 nr_pages = PFN_UP(MAX_TILER_HEAPS * ctx_alloc->heap_context_size_aligned);
 	u64 heap_gpu_va = 0;
 
@@ -165,10 +172,6 @@ u64 kbase_csf_heap_context_allocator_alloc(
 	 * MMU operations.
 	 */
 	const enum kbase_caller_mmu_sync_info mmu_sync_info = CALLER_MMU_ASYNC;
-
-#ifdef CONFIG_MALI_VECTOR_DUMP
-	flags |= BASE_MEM_PROT_CPU_RD;
-#endif
 
 	mutex_lock(&ctx_alloc->lock);
 
