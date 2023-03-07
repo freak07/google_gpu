@@ -3606,13 +3606,7 @@ static void kbase_csf_user_reg_vm_close(struct vm_area_struct *vma)
  * User space must not attempt mremap on USER page mapping.
  * This function will return an error to fail the attempt.
  */
-static int
-#if ((KERNEL_VERSION(5, 13, 0) <= LINUX_VERSION_CODE) || \
-	(KERNEL_VERSION(5, 11, 0) > LINUX_VERSION_CODE))
-kbase_csf_user_reg_vm_mremap(struct vm_area_struct *vma)
-#else
-kbase_csf_user_reg_vm_mremap(struct vm_area_struct *vma, unsigned long flags)
-#endif
+static int kbase_csf_user_reg_vm_mremap(struct vm_area_struct *vma, unsigned long flags)
 {
 	pr_debug("Unexpected call to mremap method for USER page mapping vma\n");
 	return -EINVAL;
